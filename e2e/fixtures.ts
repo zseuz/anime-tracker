@@ -68,10 +68,16 @@ export async function register(page: Page, username = uniqueUser(), password = P
   await page.goto('/login');
   await page.getByRole('tab', { name: 'Crear cuenta' }).click();
   await page.getByLabel('Usuario').fill(username);
-  await page.getByLabel('Contraseña').fill(password);
+  await page.locator('input[name=password]').fill(password);
   await page.getByRole('button', { name: 'Crear cuenta' }).click();
   await expect(page.getByRole('heading', { name: 'Explorar' })).toBeVisible();
   return username;
+}
+
+/** Signs out through the user menu (avatar). */
+export async function logout(page: Page) {
+  await page.getByRole('button', { name: 'Menú de usuario' }).click();
+  await page.getByRole('menuitem', { name: 'Cerrar sesión' }).click();
 }
 
 /** Fails the test on serious or critical accessibility violations. */

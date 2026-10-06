@@ -17,6 +17,11 @@ if (!secret || secret.length < 32) {
     jwtSecret: secret,
     corsOrigin: process.env.CORS_ORIGIN,
     secureCookies: process.env.NODE_ENV === 'production',
+    // Attempts per 15 minutes and IP on the endpoints that check a password (default 20).
+    // Raised only by the automated end-to-end tests, which sign up many users from one machine.
+    authRateLimit: process.env.AUTH_RATE_LIMIT_MAX
+      ? { windowMs: 15 * 60 * 1000, max: Number(process.env.AUTH_RATE_LIMIT_MAX) }
+      : undefined,
   });
   const port = Number(process.env.PORT || 3000);
   app.listen(port, () => console.log(`API lista en http://localhost:${port}`));

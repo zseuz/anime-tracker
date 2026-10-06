@@ -1,0 +1,82 @@
+:host { display: block; max-width: 720px; margin: 0 auto; }
+
+.head { margin-bottom: 20px; }
+.head h1 { margin: 0; font-size: clamp(26px, 4vw, 34px); }
+.head p { margin: 4px 0 0; opacity: 0.75; }
+
+.card {
+  margin-bottom: 20px;
+  padding: 22px 24px;
+  border-radius: var(--at-radius);
+  background: var(--mat-sys-surface-container);
+  border: 1px solid var(--at-border);
+
+  h2 { margin: 0 0 14px; font-size: 20px; }
+  p { margin: 0 0 12px; line-height: 1.5; }
+}
+
+.form { display: flex; flex-direction: column; gap: 16px; }
+
+.preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  strong { display: block; font-size: 18px; }
+  small { opacity: 0.7; }
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 700;
+  flex: none;
+  box-shadow: var(--at-shadow);
+  transition: background 0.2s ease;
+}
+
+.swatches { display: flex; flex-wrap: wrap; gap: 12px; }
+.swatch {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  &:hover { transform: scale(1.1); }
+  &.selected { border-color: var(--mat-sys-on-surface); box-shadow: 0 0 0 3px var(--mat-sys-surface-container); }
+}
+
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.reveal { align-self: flex-start; }
+
+.error { margin: 0; }
+.ok {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--at-radius-sm);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+
+.danger { border-color: color-mix(in srgb, var(--mat-sys-error) 55%, transparent); }
+.danger h2 { color: var(--mat-sys-error); }
+.danger-btn { color: var(--mat-sys-error); --mat-button-outlined-outline-color: var(--mat-sys-error); }
+.danger-fill {
+  --mat-button-filled-container-color: var(--mat-sys-error);
+  --mat-button-filled-label-text-color: var(--mat-sys-on-error);
+}
+
+@media (max-width: 600px) {
+  .card { padding: 18px 16px; }
+}

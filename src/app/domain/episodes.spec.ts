@@ -1,4 +1,15 @@
-import { airedEpisodes, episodeRange } from './episodes';
+import { airedEpisodes, episodeRange, sortEpisodes } from './episodes';
+
+describe('sortEpisodes', () => {
+  const eps = [{ number: 2 }, { number: 3 }, { number: 1 }];
+  it('orders ascending', () => expect(sortEpisodes(eps, 'asc').map(e => e.number)).toEqual([1, 2, 3]));
+  it('orders descending', () => expect(sortEpisodes(eps, 'desc').map(e => e.number)).toEqual([3, 2, 1]));
+  it('does not mutate the input', () => {
+    sortEpisodes(eps, 'desc');
+    expect(eps.map(e => e.number)).toEqual([2, 3, 1]);
+  });
+  it('handles an empty list', () => expect(sortEpisodes([], 'desc')).toEqual([]));
+});
 
 describe('episodeRange', () => {
   it('builds 1..n', () => expect(episodeRange(3)).toEqual([1, 2, 3]));

@@ -1,6 +1,31 @@
-.wrap { display: grid; place-items: center; min-height: 100vh; padding: 16px; box-sizing: border-box; }
+.wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  /* Soft colour blobs behind the card. */
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.35;
+    z-index: 0;
+    pointer-events: none;
+  }
+  &::before { background: var(--mat-sys-primary); top: -120px; left: -100px; }
+  &::after { background: var(--mat-sys-tertiary); bottom: -140px; right: -100px; }
+}
 
 .panel {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 400px;
   padding: 28px 24px 24px;

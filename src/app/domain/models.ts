@@ -86,8 +86,18 @@ export interface TrackedAnime {
   notes: string;
 }
 
+export const AVATAR_IDS = ['violet', 'rose', 'blue', 'green', 'orange', 'teal'] as const;
+export type AvatarId = (typeof AVATAR_IDS)[number];
+export const DEFAULT_AVATAR: AvatarId = 'violet';
+
 export interface Session {
   username: string;
+  avatar: AvatarId;
+}
+
+export interface ProfileChanges {
+  username?: string;
+  avatar?: AvatarId;
 }
 
 export const displayTitle = (a: Pick<Anime, 'title' | 'title_english'>): string =>

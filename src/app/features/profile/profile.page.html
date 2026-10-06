@@ -1,0 +1,111 @@
+<app-breadcrumbs [items]="crumbs" />
+<header class="head">
+  <h1>Mi perfil</h1>
+  <p>Cambia cómo te ve la app y gestiona tu cuenta.</p>
+</header>
+
+<section class="card" aria-labelledby="profile-title">
+  <h2 id="profile-title">Perfil</h2>
+  <form (ngSubmit)="saveProfile()" class="form">
+    <div class="preview">
+      <span class="avatar" [style.background]="gradient(avatar())" aria-hidden="true">{{ initial }}</span>
+      <div>
+        <strong>{{ username.trim() || accountName() }}</strong>
+        <small>Así se verá tu avatar</small>
+      </div>
+    </div>
+
+    <div role="radiogroup" aria-label="Color del avatar" class="swatches">
+      @for (a of avatars; track a.id) {
+        <button type="button" role="radio" class="swatch" [style.background]="a.gradient"
+                [attr.aria-checked]="avatar() === a.id" [attr.aria-label]="a.label" [title]="a.label"
+                [class.selected]="avatar() === a.id" (click)="pickAvatar(a.id)">
+          @if (avatar() === a.id) { <mat-icon aria-hidden="true">check</mat-icon> }
+        </button>
+      }
+    </div>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Nombre de usuario</mat-label>
+      <input matInput name="username" [(ngModel)]="username" required [attr.maxlength]="maxUsername"
+             autocomplete="username" (ngModelChange)="profileMessage.set('')" />
+      <mat-hint>Es el que usas para iniciar sesión.</mat-hint>
+    </mat-form-field>
+
+    @if (profileError()) { <p class="error" role="alert">{{ profileError() }}</p> }
+    @if (profileMessage()) { <p class="ok" role="status">{{ profileMessage() }}</p> }
+    <div class="actions">
+      <button mat-flat-button type="submit" [disabled]="!canSaveProfile">Guardar cambios</button>
+    </div>
+  </form>
+</section>
+
+<section class="card" aria-labelledby="password-title">
+  <h2 id="password-title">Contraseña</h2>
+  <form (ngSubmit)="changePassword()" class="form">
+    <!-- Lets password managers know which account this is. -->
+    <input type="text" name="account" autocomplete="username" [value]="accountName()" hidden aria-hidden="true" tabindex="-1" />
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Contraseña actual</mat-label>
+      <input matInput [type]="showPasswords() ? 'text' : 'password'" name="current" [(ngModel)]="currentPassword"
+             autocomplete="current-password" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Contraseña nueva</mat-label>
+      <input matInput [type]="showPasswords() ? 'text' : 'password'" name="new" [(ngModel)]="newPassword"
+             autocomplete="new-password" />
+      <mat-hint>Mínimo {{ minPassword }} caracteres, con letras y números</mat-hint>
+    </mat-form-field>
+    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+      <mat-label>Repite la contraseña nueva</mat-label>
+      <input matInput [type]="showPasswords() ? 'text' : 'password'" name="confirm" [(ngModel)]="confirmPassword"
+             autocomplete="new-password" />
+      @if (passwordMismatch) { <mat-error>Las contraseñas no coinciden</mat-error> }
+    </mat-form-field>
+
+    <button mat-button type="button" class="reveal" (click)="showPasswords.set(!showPasswords())"
+            [attr.aria-pressed]="showPasswords()">
+      <mat-icon>{{ showPasswords() ? 'visibility_off' : 'visibility' }}</mat-icon>
+      {{ showPasswords() ? 'Ocultar contraseñas' : 'Mostrar contraseñas' }}
+    </button>
+
+    @if (passwordMismatch) { <p class="error" role="alert">Las contraseñas no coinciden.</p> }
+    @if (passwordError()) { <p class="error" role="alert">{{ passwordError() }}</p> }
+    @if (passwordMessage()) { <p class="ok" role="status">{{ passwordMessage() }}</p> }
+    <div class="actions">
+      <button mat-flat-button type="submit" [disabled]="!canChangePassword">Cambiar contraseña</button>
+    </div>
+  </form>
+</section>
+
+<section class="card danger" aria-labelledby="danger-title">
+  <h2 id="danger-title">Eliminar cuenta</h2>
+  <p>
+    Se borrarán tu cuenta y toda tu lista (capítulos vistos, estados, notas y avisos). Esta acción
+    <strong>no se puede deshacer</strong>.
+  </p>
+  @if (!confirmingDelete()) {
+    <div class="actions">
+      <button mat-stroked-button type="button" class="danger-btn" (click)="startDelete()">
+        <mat-icon>delete_forever</mat-icon> Eliminar mi cuenta
+      </button>
+    </div>
+  } @else {
+    <form (ngSubmit)="deleteAccount()" class="form">
+      <input type="text" name="account" autocomplete="username" [value]="accountName()" hidden aria-hidden="true" tabindex="-1" />
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Escribe tu contraseña para confirmar</mat-label>
+        <input matInput type="password" name="deletePassword" [(ngModel)]="deletePassword"
+               autocomplete="current-password" />
+      </mat-form-field>
+      @if (deleteError()) { <p class="error" role="alert">{{ deleteError() }}</p> }
+      <div class="actions">
+        <button mat-button type="button" (click)="cancelDelete()">Cancelar</button>
+        <button mat-flat-button type="submit" class="danger-fill" [disabled]="!deletePassword || deleting()">
+          Sí, eliminar definitivamente
+        </button>
+      </div>
+    </form>
+  }
+</section>

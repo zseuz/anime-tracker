@@ -13,6 +13,7 @@ const MAX_PASSWORD = 72; // bcrypt limit
 const MAX_USERNAME = 50;
 const MAX_LIST = 2000;
 const STATUSES = ['plan', 'watching', 'completed', 'dropped'];
+const AVATARS = ['violet', 'rose', 'blue', 'green', 'orange', 'teal'];
 
 const isInt = v => Number.isInteger(v) && v >= 0;
 
@@ -21,6 +22,7 @@ const strongPassword = p =>
   typeof p === 'string' && p.length >= MIN_PASSWORD && p.length <= MAX_PASSWORD && /[A-Za-z]/.test(p) && /\d/.test(p);
 
 const validUsername = u => typeof u === 'string' && u.trim().length >= 1 && u.trim().length <= MAX_USERNAME;
+const validPasswordInput = p => typeof p === 'string' && p.length > 0 && p.length <= MAX_PASSWORD;
 
 function validItem(t) {
   return (
@@ -36,6 +38,8 @@ function validItem(t) {
   );
 }
 
+const publicProfile = user => ({ username: user.username, avatar: user.avatar ?? 'violet' });
+
 /**
  * @param {{users: object, lists: object, jwtSecret: string, corsOrigin?: string,
  *          secureCookies?: boolean, authRateLimit?: {windowMs: number, max: number}}} deps
@@ -43,10 +47,11 @@ function validItem(t) {
 function createApp({ users, lists, jwtSecret, corsOrigin, secureCookies = false, authRateLimit }) {
   if (!jwtSecret) throw new Error('JWT_SECRET es obligatorio');
   const app = express();
-  app.use(cors({ origin: corsOrigin || false, credentials: true }));
+  app.use(cors({ origin: corsOrigin || false, credentials: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }));
   app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());
 
+  /** Shared by every endpoint that checks a password, so none of them can be used to guess it. */
   const limiter = rateLimit({
     windowMs: authRateLimit?.windowMs ?? 15 * 60 * 1000,
     limit: authRateLimit?.max ?? 20,
@@ -73,6 +78,18 @@ function createApp({ users, lists, jwtSecret, corsOrigin, secureCookies = false,
     }
   };
 
+  /** Loads the signed-in user; 401 if the account no longer exists (e.g. it was deleted). */
+  const loadUser = async (req, res, next) => {
+    try {
+      req.user = await users.findById(req.userId);
+      if (!req.user) {
+        res.clearCookie(COOKIE, cookieOptions);
+        return res.status(401).json({ error: 'Usuario inexistente' });
+      }
+      next();
+    } catch (e) { next(e); }
+  };
+
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
   app.post('/api/auth/register', limiter, async (req, res, next) => {
@@ -82,10 +99,9 @@ function createApp({ users, lists, jwtSecret, corsOrigin, secureCookies = false,
       if (!strongPassword(password)) {
         return res.status(400).json({ error: `La contraseña debe tener ${MIN_PASSWORD}+ caracteres, con letras y números` });
       }
-      const name = username.trim();
-      const user = await users.create(name, await bcrypt.hash(password, 10));
+      const user = await users.create(username.trim(), await bcrypt.hash(password, 10));
       startSession(res, user);
-      res.status(201).json({ username: name });
+      res.status(201).json(publicProfile(user));
     } catch (e) {
       if (e instanceof DuplicateUserError) return res.status(409).json({ error: 'Ese usuario ya existe' });
       next(e);
@@ -96,11 +112,11 @@ function createApp({ users, lists, jwtSecret, corsOrigin, secureCookies = false,
     try {
       const { username, password } = req.body ?? {};
       const bad = () => res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
-      if (!validUsername(username) || typeof password !== 'string' || password.length > MAX_PASSWORD) return bad();
+      if (!validUsername(username) || !validPasswordInput(password)) return bad();
       const user = await users.findByUsername(username.trim());
       if (!user || !(await bcrypt.compare(password, user.passwordHash))) return bad();
       startSession(res, user);
-      res.json({ username: user.username });
+      res.json(publicProfile(user));
     } catch (e) { next(e); }
   });
 
@@ -109,19 +125,64 @@ function createApp({ users, lists, jwtSecret, corsOrigin, secureCookies = false,
     res.status(204).end();
   });
 
-  app.get('/api/me', requireAuth, async (req, res, next) => {
+  app.get('/api/me', requireAuth, loadUser, (req, res) => res.json(publicProfile(req.user)));
+
+  /** Edits the profile: username and/or avatar colour. */
+  app.patch('/api/me', requireAuth, loadUser, async (req, res, next) => {
     try {
-      const user = await users.findById(req.userId);
-      if (!user) return res.status(401).json({ error: 'Usuario inexistente' });
-      res.json({ username: user.username });
+      const { username, avatar } = req.body ?? {};
+      if (username === undefined && avatar === undefined) return res.status(400).json({ error: 'Nada que cambiar' });
+      if (username !== undefined && !validUsername(username)) {
+        return res.status(400).json({ error: 'Usuario requerido (máx. 50 caracteres)' });
+      }
+      if (avatar !== undefined && !AVATARS.includes(avatar)) return res.status(400).json({ error: 'Color de avatar inválido' });
+      const next_ = {
+        username: username === undefined ? req.user.username : username.trim(),
+        avatar: avatar ?? req.user.avatar ?? 'violet',
+      };
+      await users.updateProfile(req.userId, next_);
+      res.json(publicProfile(next_));
+    } catch (e) {
+      if (e instanceof DuplicateUserError) return res.status(409).json({ error: 'Ese usuario ya existe' });
+      next(e);
+    }
+  });
+
+  app.put('/api/me/password', requireAuth, limiter, loadUser, async (req, res, next) => {
+    try {
+      const { currentPassword, newPassword } = req.body ?? {};
+      if (!validPasswordInput(currentPassword) || !(await bcrypt.compare(currentPassword, req.user.passwordHash))) {
+        return res.status(403).json({ error: 'La contraseña actual no es correcta' });
+      }
+      if (!strongPassword(newPassword)) {
+        return res.status(400).json({ error: `La contraseña nueva debe tener ${MIN_PASSWORD}+ caracteres, con letras y números` });
+      }
+      if (newPassword === currentPassword) {
+        return res.status(400).json({ error: 'La contraseña nueva debe ser distinta de la actual' });
+      }
+      await users.updatePassword(req.userId, await bcrypt.hash(newPassword, 10));
+      res.status(204).end();
     } catch (e) { next(e); }
   });
 
-  app.get('/api/list', requireAuth, async (req, res, next) => {
+  /** Deletes the account and its data; needs the password so a stolen session cannot do it. */
+  app.delete('/api/me', requireAuth, limiter, loadUser, async (req, res, next) => {
+    try {
+      const { password } = req.body ?? {};
+      if (!validPasswordInput(password) || !(await bcrypt.compare(password, req.user.passwordHash))) {
+        return res.status(403).json({ error: 'La contraseña no es correcta' });
+      }
+      await users.remove(req.userId);
+      res.clearCookie(COOKIE, cookieOptions);
+      res.status(204).end();
+    } catch (e) { next(e); }
+  });
+
+  app.get('/api/list', requireAuth, loadUser, async (req, res, next) => {
     try { res.json(await lists.get(req.userId)); } catch (e) { next(e); }
   });
 
-  app.put('/api/list', requireAuth, async (req, res, next) => {
+  app.put('/api/list', requireAuth, loadUser, async (req, res, next) => {
     try {
       const items = req.body;
       if (!Array.isArray(items) || items.length > MAX_LIST || !items.every(validItem)) {

@@ -31,7 +31,7 @@ export default defineConfig({
     {
       command: 'node src/index.js',
       cwd: 'server',
-      env: { DB_NAME: 'anime_tracker_test', PORT: '3000', CORS_ORIGIN: 'http://localhost:4200' },
+      env: { DB_NAME: 'anime_tracker_test', PORT: '3000', CORS_ORIGIN: 'http://localhost:4200', AUTH_RATE_LIMIT_MAX: '10000' },
       url: 'http://localhost:3000/api/health',
       reuseExistingServer: false,
       timeout: 30_000,

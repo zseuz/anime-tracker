@@ -1,22 +1,22 @@
-import { expect, expectAccessible, PASSWORD, register, test, uniqueUser } from './fixtures';
+import { expect, expectAccessible, logout, mockExternal, PASSWORD, register, test, uniqueUser } from './fixtures';
 
 test.describe('registro y sesión', () => {
   test('rechaza una contraseña débil y acepta una fuerte', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('tab', { name: 'Crear cuenta' }).click();
     await page.getByLabel('Usuario').fill(uniqueUser());
-    await page.getByLabel('Contraseña').fill('abc123');
+    await page.locator('input[name=password]').fill('abc123');
     await expect(page.getByRole('button', { name: 'Crear cuenta' })).toBeDisabled();
-    await page.getByLabel('Contraseña').fill(PASSWORD);
+    await page.locator('input[name=password]').fill(PASSWORD);
     await expect(page.getByRole('button', { name: 'Crear cuenta' })).toBeEnabled();
   });
 
   test('un usuario repetido muestra el error del servidor', async ({ page }) => {
     const name = await register(page);
-    await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+    await logout(page);
     await page.getByRole('tab', { name: 'Crear cuenta' }).click();
     await page.getByLabel('Usuario').fill(name);
-    await page.getByLabel('Contraseña').fill(PASSWORD);
+    await page.locator('input[name=password]').fill(PASSWORD);
     await page.getByRole('button', { name: 'Crear cuenta' }).click();
     await expect(page.getByRole('alert')).toContainText('ya existe');
   });
@@ -35,13 +35,13 @@ test.describe('registro y sesión', () => {
 
   test('cerrar sesión protege las rutas y se puede volver a entrar', async ({ page }) => {
     const name = await register(page);
-    await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+    await logout(page);
     await expect(page).toHaveURL(/\/login/);
     await page.goto('/mi-lista');
     await expect(page).toHaveURL(/\/login/);
 
     await page.getByLabel('Usuario').fill(name);
-    await page.getByLabel('Contraseña').fill(PASSWORD);
+    await page.locator('input[name=password]').fill(PASSWORD);
     await page.getByRole('button', { name: 'Entrar' }).click();
     await expect(page.getByRole('heading', { name: 'Explorar' })).toBeVisible();
   });
@@ -49,7 +49,7 @@ test.describe('registro y sesión', () => {
   test('credenciales incorrectas muestran un error', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel('Usuario').fill('nadie');
-    await page.getByLabel('Contraseña').fill('equivocada1');
+    await page.locator('input[name=password]').fill('equivocada1');
     await page.getByRole('button', { name: 'Entrar' }).click();
     await expect(page.getByRole('alert')).toContainText('incorrectos');
   });
@@ -129,9 +129,9 @@ test.describe('seguimiento', () => {
     await expect(page.getByText('1 / 1 vistos')).toBeVisible();
     await page.waitForTimeout(500); // let the save reach the server
 
-    await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+    await logout(page);
     await page.getByLabel('Usuario').fill(name);
-    await page.getByLabel('Contraseña').fill(PASSWORD);
+    await page.locator('input[name=password]').fill(PASSWORD);
     await page.getByRole('button', { name: 'Entrar' }).click();
     await page.getByRole('link', { name: 'Mi lista' }).first().click();
     await expect(page.locator('article', { hasText: 'Your Name' })).toContainText('1 vistos');
@@ -188,5 +188,106 @@ test.describe('apariencia y accesibilidad', () => {
     await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.locator('#main')).toBeFocused();
+  });
+});
+
+test.describe('perfil', () => {
+  const openProfile = async (page: import('@playwright/test').Page) => {
+    await page.getByRole('button', { name: 'Menú de usuario' }).click();
+    await page.getByRole('menuitem', { name: 'Mi perfil' }).click();
+    await expect(page.getByRole('heading', { name: 'Mi perfil' })).toBeVisible();
+  };
+
+  test('cambiar nombre y color: se guarda, sobrevive a recargar y el nombre nuevo inicia sesión', async ({ page }) => {
+    const name = await register(page);
+    const renamed = `${name}x`;
+    await openProfile(page);
+
+    await page.getByRole('radio', { name: 'Turquesa' }).click();
+    await page.getByLabel('Nombre de usuario').fill(renamed);
+    await page.getByRole('button', { name: 'Guardar cambios' }).click();
+    await expect(page.getByRole('status')).toContainText('Perfil actualizado');
+    await expect(page.getByRole('button', { name: 'Menú de usuario' })).toContainText(renamed);
+
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Menú de usuario' })).toContainText(renamed);
+    await expect(page.getByRole('radio', { name: 'Turquesa' })).toHaveAttribute('aria-checked', 'true');
+
+    await logout(page);
+    await page.getByLabel('Usuario').fill(renamed);
+    await page.locator('input[name=password]').fill(PASSWORD);
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.getByRole('heading', { name: 'Explorar' })).toBeVisible();
+  });
+
+  test('no permite quedarse con el nombre de otro usuario', async ({ browser, page }) => {
+    const other = await register(page);
+    const second = await (await browser.newContext()).newPage();
+    await mockExternal(second);
+    const mine = await register(second);
+    await openProfile(second);
+    await second.getByLabel('Nombre de usuario').fill(other.toUpperCase());
+    await second.getByRole('button', { name: 'Guardar cambios' }).click();
+    await expect(second.getByRole('alert')).toContainText('ya existe');
+    await expect(second.getByRole('button', { name: 'Menú de usuario' })).toContainText(mine);
+  });
+
+  test('cambiar la contraseña: la anterior deja de funcionar', async ({ page }) => {
+    const name = await register(page);
+    await openProfile(page);
+    await page.getByLabel('Contraseña actual').fill(PASSWORD);
+    await page.getByLabel('Contraseña nueva', { exact: true }).fill('Nueva98765');
+    await page.getByLabel('Repite la contraseña nueva').fill('Nueva98765');
+    await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
+    await expect(page.getByRole('status')).toContainText('Contraseña actualizada');
+
+    await logout(page);
+    await page.getByLabel('Usuario').fill(name);
+    await page.locator('input[name=password]').fill(PASSWORD);
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.getByRole('alert')).toContainText('incorrectos');
+    await page.locator('input[name=password]').fill('Nueva98765');
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.getByRole('heading', { name: 'Explorar' })).toBeVisible();
+  });
+
+  test('con una contraseña actual incorrecta muestra el error', async ({ page }) => {
+    await register(page);
+    await openProfile(page);
+    await page.getByLabel('Contraseña actual').fill('Equivocada1');
+    await page.getByLabel('Contraseña nueva', { exact: true }).fill('Nueva98765');
+    await page.getByLabel('Repite la contraseña nueva').fill('Nueva98765');
+    await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
+    await expect(page.getByRole('alert')).toContainText('actual no es correcta');
+  });
+
+  test('eliminar la cuenta pide la contraseña, borra los datos y cierra la sesión', async ({ page }) => {
+    const name = await register(page);
+    await page.locator('app-anime-card', { hasText: 'Your Name' }).click();
+    await page.getByRole('checkbox', { name: /Capítulo 1/ }).check();
+    await page.waitForTimeout(500);
+    await openProfile(page);
+
+    await page.getByRole('button', { name: 'Eliminar mi cuenta' }).click();
+    await page.getByLabel('Escribe tu contraseña para confirmar').fill('Equivocada1');
+    await page.getByRole('button', { name: 'Sí, eliminar definitivamente' }).click();
+    await expect(page.getByRole('alert')).toContainText('no es correcta');
+
+    await page.getByLabel('Escribe tu contraseña para confirmar').fill(PASSWORD);
+    await page.getByRole('button', { name: 'Sí, eliminar definitivamente' }).click();
+    await expect(page).toHaveURL(/\/login/);
+
+    await page.getByLabel('Usuario').fill(name);
+    await page.locator('input[name=password]').fill(PASSWORD);
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.getByRole('alert')).toContainText('incorrectos');
+  });
+
+  test('la página de perfil no tiene violaciones graves de accesibilidad (oscuro y claro)', async ({ page }) => {
+    await register(page);
+    await openProfile(page);
+    await expectAccessible(page);
+    await page.getByRole('button', { name: 'Cambiar a tema claro' }).click();
+    await expectAccessible(page);
   });
 });

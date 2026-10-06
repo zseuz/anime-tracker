@@ -6,18 +6,21 @@ import { AnimeCatalog, AuthGateway, KeyValueStore, Notifier, WatchListRepository
 import {
   FakeAuthGateway, FakeCatalog, FakeNotifier, FakeWatchListRepository, InMemoryStore, makeAnime, makeEpisodes, makeTracked,
 } from '../../testing/fakes';
-import { AnimeDetailPage } from './anime-detail.page';
+import { AnimeDetailPage, EPISODE_ORDER_KEY } from './anime-detail.page';
 
 describe('AnimeDetailPage', () => {
   let fixture: ComponentFixture<AnimeDetailPage>;
   let repo: FakeWatchListRepository;
   let catalog: FakeCatalog;
+  let store: InMemoryStore;
   type Internals = Record<string, any>;
   const el = () => fixture.nativeElement as HTMLElement;
   const page = () => fixture.componentInstance as unknown as Internals;
 
-  const setup = async (opts: { stored?: ReturnType<typeof makeTracked>[]; anime?: Partial<ReturnType<typeof makeAnime>> } = {}) => {
+  const setup = async (opts: { order?: string; stored?: ReturnType<typeof makeTracked>[]; anime?: Partial<ReturnType<typeof makeAnime>> } = {}) => {
     catalog = new FakeCatalog();
+    store = new InMemoryStore();
+    if (opts.order) store.set(EPISODE_ORDER_KEY, opts.order);
     repo = new FakeWatchListRepository();
     repo.stored = opts.stored ?? [];
     catalog.animeById.set(1, makeAnime({ id: 1, ...opts.anime }));
@@ -26,7 +29,7 @@ describe('AnimeDetailPage', () => {
       providers: [
         provideRouter([]),
         { provide: AnimeCatalog, useValue: catalog },
-        { provide: KeyValueStore, useValue: new InMemoryStore() },
+        { provide: KeyValueStore, useValue: store },
         { provide: AuthGateway, useValue: new FakeAuthGateway() },
         { provide: WatchListRepository, useValue: repo },
         { provide: Notifier, useValue: new FakeNotifier() },
@@ -71,6 +74,56 @@ describe('AnimeDetailPage', () => {
       fixture.componentRef.setInput('from', 'otra-cosa');
       await render();
       expect(el().textContent).toContain('Volver a Explorar');
+    });
+  });
+
+  describe('episode order', () => {
+    const numbers = () => [...el().querySelectorAll('mat-list-item')].map(i => i.id);
+
+    it('is ascending by default', async () => {
+      await setup();
+      await render();
+      expect(numbers()).toEqual(['ep-1', 'ep-2', 'ep-3', 'ep-4', 'ep-5']);
+      expect(page()['order']()).toBe('asc');
+    });
+
+    it('can be switched to descending, and remembered', async () => {
+      await setup();
+      await render();
+      page()['setOrder']('desc');
+      fixture.detectChanges();
+      expect(numbers()).toEqual(['ep-5', 'ep-4', 'ep-3', 'ep-2', 'ep-1']);
+      expect(store.get(EPISODE_ORDER_KEY, '')).toBe('desc');
+    });
+
+    it('starts descending when that was the saved preference', async () => {
+      await setup({ order: 'desc' });
+      await render();
+      expect(numbers()[0]).toBe('ep-5');
+    });
+
+    it('ignores a corrupt saved preference', async () => {
+      await setup({ order: 'sideways' });
+      await render();
+      expect(page()['order']()).toBe('asc');
+    });
+
+    it('offers both options as a labelled toggle group', async () => {
+      await setup();
+      await render();
+      const labels = [...el().querySelectorAll('mat-button-toggle')].map(t => t.textContent?.trim());
+      expect(labels.join(' ')).toContain('Ascendente');
+      expect(labels.join(' ')).toContain('Descendente');
+    });
+
+    it('keeps the checkboxes tied to the right episode when reversed', async () => {
+      await setup({ stored: [makeTracked({ id: 1, watched: [2] })] });
+      await signIn();
+      await render();
+      page()['setOrder']('desc');
+      fixture.detectChanges();
+      const checked = [...el().querySelectorAll('mat-list-item')].filter(i => i.classList.contains('done')).map(i => i.id);
+      expect(checked).toEqual(['ep-2']);
     });
   });
 

@@ -1,4 +1,4 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Anime, WatchStatus } from '../domain/models';
 import { WatchListRepository } from '../domain/ports';
 import * as wl from '../domain/watch-list';
@@ -27,10 +27,13 @@ export class WatchListService {
   private saves: Promise<void> = Promise.resolve();
 
   constructor() {
+    // Keyed on the session, not the username: renaming your profile must not reload the list.
     effect(() => {
-      const user = this.auth.user();
-      this.state.set([]);
-      this.loaded = user ? this.load(user) : Promise.resolve();
+      const session = this.auth.sessionId();
+      untracked(() => {
+        this.state.set([]);
+        this.loaded = this.auth.loggedIn() ? this.load(session) : Promise.resolve();
+      });
     });
   }
 
@@ -97,14 +100,14 @@ export class WatchListService {
     return this.loaded;
   }
 
-  private async load(user: string) {
+  private async load(session: number) {
     this.loading.set(true);
     this.syncError.set(false);
     try {
       const list = await this.repo.load();
-      if (this.auth.user() === user) this.state.set(list);
+      if (this.auth.sessionId() === session) this.state.set(list);
     } catch {
-      if (this.auth.user() === user) this.syncError.set(true);
+      if (this.auth.sessionId() === session) this.syncError.set(true);
     } finally {
       this.loading.set(false);
     }

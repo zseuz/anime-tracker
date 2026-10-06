@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { AuthService } from './application/auth.service';
 import { NOTIFY_PREF_KEY } from './application/notification.service';
 import { THEME_KEY } from './application/theme.service';
 import { AnimeCatalog, AuthGateway, KeyValueStore, Notifier, WatchListRepository } from './domain/ports';
 import { FakeAuthGateway, FakeCatalog, FakeNotifier, FakeWatchListRepository, InMemoryStore } from './testing/fakes';
+import { avatarGradient } from './shared/avatar';
 import { App } from './app';
 
 describe('App shell', () => {
@@ -13,12 +14,16 @@ describe('App shell', () => {
   let notifier: FakeNotifier;
   const el = () => fixture.nativeElement as HTMLElement;
 
-  const create = async (signedIn: boolean) => {
+  const create = async (signedIn: boolean, opts: { notifications?: 'unsupported'; avatar?: 'teal' } = {}) => {
     store = new InMemoryStore();
     notifier = new FakeNotifier();
-    if (signedIn) store.set('at.session', { username: 'rei' });
+    if (opts.notifications) notifier.state = opts.notifications;
     const gateway = new FakeAuthGateway();
-    gateway.serverSession = 'rei';
+    if (signedIn) {
+      await gateway.register('rei', 'secret12'); // the server knows the user and has a session for them
+      if (opts.avatar) await gateway.updateProfile({ avatar: opts.avatar });
+      store.set('at.session', { username: 'rei', avatar: opts.avatar ?? 'violet' });
+    }
     TestBed.configureTestingModule({
       providers: [
         provideRouter([{ path: 'login', children: [] }]),
@@ -72,30 +77,72 @@ describe('App shell', () => {
   });
 
   it('hides the bell when the browser has no Notification API', async () => {
-    store = new InMemoryStore();
-    notifier = new FakeNotifier();
-    notifier.state = 'unsupported';
-    store.set('at.session', { username: 'rei' });
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter([]),
-        { provide: KeyValueStore, useValue: store },
-        { provide: AuthGateway, useValue: new FakeAuthGateway() },
-        { provide: AnimeCatalog, useValue: new FakeCatalog() },
-        { provide: WatchListRepository, useValue: new FakeWatchListRepository() },
-        { provide: Notifier, useValue: notifier },
-      ],
-    });
-    fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
+    await create(true, { notifications: 'unsupported' });
+    expect(el().querySelector('mat-toolbar')).not.toBeNull(); // really signed in, so the absence is meaningful
     expect(button(/notificaciones/i)).toBeUndefined();
   });
 
-  it('logging out returns to the signed-out view', async () => {
-    await create(true);
-    button(/cerrar sesión/i).click();
+  it('paints the avatar with the colour chosen in the profile', async () => {
+    await create(true, { avatar: 'teal' });
+    const avatar = el().querySelector<HTMLElement>('.avatar-btn .avatar')!;
+    const expected = (id: 'teal' | 'violet') => {
+      const probe = document.createElement('div');
+      probe.style.background = avatarGradient(id); // let the browser normalise the value
+      return probe.style.background;
+    };
+    expect(avatar.style.background).toBe(expected('teal'));
+    expect(avatar.style.background).not.toBe(expected('violet'));
+  });
+
+  describe('user menu', () => {
+    const openMenu = async () => {
+      button(/menú de usuario/i).click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    };
+    const menuItems = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+
+    it('shows the username, an avatar initial and the account options', async () => {
+      await create(true);
+      expect(el().querySelector('.avatar')?.textContent?.trim()).toBe('R');
+      await openMenu();
+      const labels = menuItems().map(i => i.textContent?.trim() ?? '');
+      expect(labels.some(l => l.includes('Mi perfil'))).toBe(true);
+      expect(labels.some(l => l.includes('Mi lista'))).toBe(true);
+      expect(labels.some(l => l.includes('Cerrar sesión'))).toBe(true);
+      expect(document.querySelector('.menu-head')?.textContent).toContain('rei');
+    });
+
+    it('logging out returns to the signed-out view', async () => {
+      await create(true);
+      await openMenu();
+      menuItems().find(i => i.textContent?.includes('Cerrar sesión'))!.click();
+      await fixture.whenStable();
+      expect(TestBed.inject(AuthService).loggedIn()).toBe(false);
+      expect(el().querySelector('mat-toolbar')).toBeNull();
+    });
+  });
+
+  it('leaves the protected pages when the session turns out to be invalid', async () => {
+    store = new InMemoryStore();
+    store.set('at.session', { username: 'rei' }); // stale hint from an old session
+    const gateway = new FakeAuthGateway(); // the server has no session -> 401
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'login', children: [] }, { path: '', children: [] }]),
+        { provide: KeyValueStore, useValue: store },
+        { provide: AuthGateway, useValue: gateway },
+        { provide: AnimeCatalog, useValue: new FakeCatalog() },
+        { provide: WatchListRepository, useValue: new FakeWatchListRepository() },
+        { provide: Notifier, useValue: new FakeNotifier() },
+      ],
+    });
+    await TestBed.inject(Router).navigateByUrl('/');
+    fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    expect(TestBed.inject(AuthService).loggedIn()).toBe(false);
+    await new Promise(r => setTimeout(r));
+    await fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/login');
     expect(el().querySelector('mat-toolbar')).toBeNull();
   });
 });

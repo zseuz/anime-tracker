@@ -3,6 +3,7 @@
 class DuplicateUserError extends Error {}
 
 function userRepository(pool) {
+  const columns = 'id, username, avatar, password_hash AS passwordHash';
   return {
     async create(username, passwordHash) {
       try {
@@ -10,22 +11,35 @@ function userRepository(pool) {
           'INSERT INTO users (username, password_hash) VALUES (?, ?)',
           [username, passwordHash],
         );
-        return { id: res.insertId, username };
+        return { id: res.insertId, username, avatar: 'violet' };
       } catch (e) {
         if (e.code === 'ER_DUP_ENTRY') throw new DuplicateUserError();
         throw e;
       }
     },
     async findByUsername(username) {
-      const [rows] = await pool.execute(
-        'SELECT id, username, password_hash AS passwordHash FROM users WHERE username = ?',
-        [username],
-      );
+      const [rows] = await pool.execute(`SELECT ${columns} FROM users WHERE username = ?`, [username]);
       return rows[0] ?? null;
     },
     async findById(id) {
-      const [rows] = await pool.execute('SELECT id, username FROM users WHERE id = ?', [id]);
+      const [rows] = await pool.execute(`SELECT ${columns} FROM users WHERE id = ?`, [id]);
       return rows[0] ?? null;
+    },
+    /** Updates the given profile fields; throws DuplicateUserError if the username is taken. */
+    async updateProfile(id, { username, avatar }) {
+      try {
+        await pool.execute('UPDATE users SET username = ?, avatar = ? WHERE id = ?', [username, avatar, id]);
+      } catch (e) {
+        if (e.code === 'ER_DUP_ENTRY') throw new DuplicateUserError();
+        throw e;
+      }
+    },
+    async updatePassword(id, passwordHash) {
+      await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, id]);
+    },
+    /** Deletes the user; their watch list goes with them (ON DELETE CASCADE). */
+    async remove(id) {
+      await pool.execute('DELETE FROM users WHERE id = ?', [id]);
     },
   };
 }

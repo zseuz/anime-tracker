@@ -1,6 +1,19 @@
-.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-h1 { margin: 0; font-size: 28px; }
-.sub { margin: 4px 0 0; opacity: 0.7; }
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 22px 24px;
+  border-radius: var(--at-radius);
+  border: 1px solid var(--at-border);
+  background:
+    radial-gradient(420px 180px at 0% 0%, color-mix(in srgb, var(--mat-sys-primary) 24%, transparent), transparent 70%),
+    var(--mat-sys-surface-container);
+}
+h1 { margin: 0; font-size: clamp(24px, 4vw, 32px); }
+.sub { margin: 4px 0 0; opacity: 0.8; }
 
 .tabs {
   display: flex;

@@ -26,6 +26,37 @@ describe('LoginPage', () => {
     await fixture.whenStable();
   });
 
+  describe('show/hide password', () => {
+    const input = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('input[name=password]')!;
+    const toggle = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[matSuffix]')!;
+
+    it('hides the password by default', () => {
+      expect(input().type).toBe('password');
+      expect(toggle().getAttribute('aria-label')).toBe('Mostrar contraseña');
+      expect(toggle().getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('reveals it with the button and hides it again', async () => {
+      toggle().click();
+      await fixture.whenStable();
+      expect(input().type).toBe('text');
+      expect(toggle().getAttribute('aria-label')).toBe('Ocultar contraseña');
+      expect(toggle().getAttribute('aria-pressed')).toBe('true');
+
+      toggle().click();
+      await fixture.whenStable();
+      expect(input().type).toBe('password');
+    });
+
+    it('does not submit the form when pressed', async () => {
+      page()['username'] = 'rei';
+      page()['password'] = 'secret12';
+      toggle().click();
+      await fixture.whenStable();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+  });
+
   describe('sign in', () => {
     it('only needs a username and some password (older accounts may have short ones)', () => {
       expect(page()['canSubmit']).toBe(false);

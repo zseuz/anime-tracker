@@ -1,4 +1,4 @@
-import { Anime, AnimeFilters, Episode, Page, Session, TrackedAnime } from './models';
+import { Anime, AnimeFilters, Episode, Page, ProfileChanges, Session, TrackedAnime } from './models';
 
 /** Read access to an anime catalogue. */
 export abstract class AnimeCatalog {
@@ -25,6 +25,12 @@ export abstract class AuthGateway {
   abstract logout(): Promise<void>;
   /** The signed-in user; rejects with AuthError (status 401) when there is no valid session. */
   abstract me(): Promise<Session>;
+  /** Edits username and/or avatar colour. Rejects with AuthError (409 when the username is taken). */
+  abstract updateProfile(changes: ProfileChanges): Promise<Session>;
+  /** Rejects with AuthError (403 when the current password is wrong). */
+  abstract changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  /** Deletes the account and its data. Rejects with AuthError (403 when the password is wrong). */
+  abstract deleteAccount(password: string): Promise<void>;
 }
 
 /** Persistence of the signed-in user's watch list. */

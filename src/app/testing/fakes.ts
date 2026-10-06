@@ -1,4 +1,4 @@
-import { Anime, Episode, Page, Session, TrackedAnime } from '../domain/models';
+import { Anime, AvatarId, Episode, Page, ProfileChanges, Session, TrackedAnime } from '../domain/models';
 import {
   AnimeCatalog, AuthGateway, KeyValueStore, NotificationPermissionState, Notifier, WatchListRepository,
 } from '../domain/ports';
@@ -43,9 +43,11 @@ export class InMemoryStore extends KeyValueStore {
   remove(key: string) { this.data.delete(key); }
 }
 
+interface FakeUser { username: string; password: string; avatar: AvatarId }
+
 /** In-memory stand-in for the backend's account endpoints (the session is the "cookie"). */
 export class FakeAuthGateway extends AuthGateway {
-  private readonly users = new Map<string, string>();
+  private readonly users = new Map<string, FakeUser>();
   /** Username the "server" currently considers signed in, i.e. the cookie. */
   serverSession: string | null = null;
   /** When set, me() rejects with this error (e.g. a network failure). */
@@ -55,17 +57,18 @@ export class FakeAuthGateway extends AuthGateway {
 
   register(username: string, password: string): Promise<Session> {
     if (this.users.has(username.toLowerCase())) return Promise.reject(new AuthError('Ese usuario ya existe', 409));
-    this.users.set(username.toLowerCase(), password);
+    this.users.set(username.toLowerCase(), { username, password, avatar: 'violet' });
     this.serverSession = username;
-    return Promise.resolve({ username });
+    return Promise.resolve({ username, avatar: 'violet' });
   }
 
   login(username: string, password: string): Promise<Session> {
-    if (this.users.get(username.toLowerCase()) !== password) {
+    const user = this.users.get(username.toLowerCase());
+    if (!user || user.password !== password) {
       return Promise.reject(new AuthError('Usuario o contraseña incorrectos', 401));
     }
-    this.serverSession = username;
-    return Promise.resolve({ username });
+    this.serverSession = user.username;
+    return Promise.resolve({ username: user.username, avatar: user.avatar });
   }
 
   logout() {
@@ -77,9 +80,50 @@ export class FakeAuthGateway extends AuthGateway {
   me(): Promise<Session> {
     this.meCalls++;
     if (this.meError) return Promise.reject(this.meError);
-    return this.serverSession
-      ? Promise.resolve({ username: this.serverSession })
+    const user = this.current();
+    return user ? Promise.resolve({ username: user.username, avatar: user.avatar })
       : Promise.reject(new AuthError('No autenticado', 401));
+  }
+
+  updateProfile(changes: ProfileChanges): Promise<Session> {
+    const user = this.current();
+    if (!user) return Promise.reject(new AuthError('No autenticado', 401));
+    if (changes.username !== undefined) {
+      const key = changes.username.trim().toLowerCase();
+      if (key !== user.username.toLowerCase() && this.users.has(key)) {
+        return Promise.reject(new AuthError('Ese usuario ya existe', 409));
+      }
+      this.users.delete(user.username.toLowerCase());
+      user.username = changes.username.trim();
+      this.users.set(user.username.toLowerCase(), user);
+      this.serverSession = user.username;
+    }
+    if (changes.avatar) user.avatar = changes.avatar;
+    return Promise.resolve({ username: user.username, avatar: user.avatar });
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const user = this.current();
+    if (!user) return Promise.reject(new AuthError('No autenticado', 401));
+    if (user.password !== currentPassword) return Promise.reject(new AuthError('La contraseña actual no es correcta', 403));
+    user.password = newPassword;
+    return Promise.resolve();
+  }
+
+  deleteAccount(password: string): Promise<void> {
+    const user = this.current();
+    if (!user) return Promise.reject(new AuthError('No autenticado', 401));
+    if (user.password !== password) return Promise.reject(new AuthError('La contraseña no es correcta', 403));
+    this.users.delete(user.username.toLowerCase());
+    this.serverSession = null;
+    return Promise.resolve();
+  }
+
+  /** Test helper: is there an account with this name? */
+  has(username: string) { return this.users.has(username.toLowerCase()); }
+
+  private current() {
+    return this.serverSession ? this.users.get(this.serverSession.toLowerCase()) : undefined;
   }
 }
 

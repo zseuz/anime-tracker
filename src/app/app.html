@@ -2,11 +2,21 @@
 
 @if (auth.loggedIn()) {
   <mat-toolbar>
-    <span class="logo">AnimeTracker</span>
-    <a mat-button routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Explorar</a>
-    <a mat-button routerLink="/mi-lista" routerLinkActive="active"
-       [matBadge]="watchList.totalNew()" [matBadgeHidden]="!watchList.totalNew()" matBadgeColor="warn">Mi lista</a>
+    <a class="logo" routerLink="/" aria-label="AnimeTracker, ir a Explorar">
+      <mat-icon class="logo-mark" aria-hidden="true">play_circle</mat-icon>
+      <span>AnimeTracker</span>
+    </a>
+    <nav class="links" aria-label="Principal">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <mat-icon aria-hidden="true">explore</mat-icon> Explorar
+      </a>
+      <a routerLink="/mi-lista" routerLinkActive="active">
+        <mat-icon aria-hidden="true" [matBadge]="watchList.totalNew()" [matBadgeHidden]="!watchList.totalNew()"
+                  matBadgeColor="warn" matBadgeSize="small">bookmarks</mat-icon> Mi lista
+      </a>
+    </nav>
     <span class="spacer"></span>
+
     @if (notifications.supported()) {
       <button mat-icon-button (click)="notifications.toggle()" [attr.aria-pressed]="notifications.enabled()"
               [matTooltip]="bellLabel" [attr.aria-label]="bellLabel" [disabled]="notifications.blocked()">
@@ -18,13 +28,57 @@
             [attr.aria-label]="theme.mode() === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'">
       <mat-icon>{{ theme.mode() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
     </button>
-    <span class="user"><mat-icon inline>person</mat-icon> {{ auth.user() }}</span>
-    <button mat-icon-button (click)="logout()" aria-label="Cerrar sesión" matTooltip="Cerrar sesión"><mat-icon>logout</mat-icon></button>
+
+    <button class="avatar-btn" [matMenuTriggerFor]="userMenu" aria-label="Menú de usuario" [matTooltip]="auth.user() ?? ''">
+      <span class="avatar" [style.background]="gradient()" aria-hidden="true">{{ initial() }}</span>
+      <span class="name">{{ auth.user() }}</span>
+      <mat-icon class="caret" aria-hidden="true">expand_more</mat-icon>
+    </button>
   </mat-toolbar>
+
+  <mat-menu #userMenu="matMenu" xPosition="before" class="user-menu">
+    <div class="menu-head" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+      <span class="avatar big" [style.background]="gradient()" aria-hidden="true">{{ initial() }}</span>
+      <div>
+        <strong>{{ auth.user() }}</strong>
+        <small>Sesión iniciada</small>
+      </div>
+    </div>
+    <mat-divider />
+    <a mat-menu-item routerLink="/perfil">
+      <mat-icon>manage_accounts</mat-icon>
+      <span>Mi perfil</span>
+    </a>
+    <a mat-menu-item routerLink="/mi-lista">
+      <mat-icon>bookmarks</mat-icon>
+      <span>Mi lista</span>
+      @if (watchList.totalNew()) { <span class="menu-badge">{{ watchList.totalNew() }} nuevo(s)</span> }
+    </a>
+    <a mat-menu-item routerLink="/">
+      <mat-icon>explore</mat-icon>
+      <span>Explorar</span>
+    </a>
+    <mat-divider />
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Cerrar sesión</span>
+    </button>
+  </mat-menu>
+
   @if (watchList.syncError()) {
     <p class="sync-error" role="alert">No se pudo sincronizar tu lista con el servidor. Revisa que la API esté en marcha.</p>
   }
   <main id="main" tabindex="-1"><router-outlet /></main>
+
+  <nav class="bottom-nav" aria-label="Navegación móvil">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      <mat-icon aria-hidden="true">explore</mat-icon><span>Explorar</span>
+    </a>
+    <a routerLink="/mi-lista" routerLinkActive="active">
+      <mat-icon aria-hidden="true" [matBadge]="watchList.totalNew()" [matBadgeHidden]="!watchList.totalNew()"
+                matBadgeColor="warn" matBadgeSize="small">bookmarks</mat-icon><span>Mi lista</span>
+    </a>
+  </nav>
 } @else {
   <div id="main" tabindex="-1"><router-outlet /></div>
 }

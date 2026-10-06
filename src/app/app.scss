@@ -18,40 +18,119 @@ mat-toolbar {
   position: sticky;
   top: 0;
   z-index: 10;
-  gap: 4px;
+  gap: 6px;
+  padding: 0 16px;
   background: var(--at-surface-glass);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--at-border);
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 16px;
+  text-decoration: none;
   font-weight: 800;
   font-size: 20px;
   letter-spacing: -0.02em;
-  margin-right: 16px;
-  background: var(--at-accent-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+
+  span {
+    background: var(--at-accent-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .logo-mark { color: var(--mat-sys-primary); width: 28px; height: 28px; font-size: 28px; }
+}
+
+.links { display: flex; gap: 4px; }
+.links a, .bottom-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  color: var(--mat-sys-on-surface);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background 0.15s ease;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  &:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent); }
+  &.active {
+    background: color-mix(in srgb, var(--mat-sys-primary) 22%, transparent);
+    color: var(--mat-sys-primary);
+  }
 }
 
 .spacer { flex: 1; }
 
-.user {
+.avatar-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  padding: 4px 12px;
+  gap: 8px;
+  height: 44px;
+  margin-left: 4px;
+  padding: 0 10px 0 6px;
+  border: 1px solid var(--at-border);
   border-radius: 999px;
   background: var(--mat-sys-surface-container-high);
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover { border-color: var(--mat-sys-primary); }
+  .name { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .caret { width: 20px; height: 20px; font-size: 20px; opacity: 0.7; }
 }
 
-a[mat-button] { border-radius: 999px; }
-.active { background: color-mix(in srgb, var(--mat-sys-primary) 20%, transparent); }
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--at-accent-gradient);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  flex: none;
+
+  &.big { width: 44px; height: 44px; font-size: 20px; }
+}
+
+.menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  min-width: 220px;
+
+  strong { display: block; }
+  small { opacity: 0.7; }
+}
+
+.menu-badge {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--mat-sys-tertiary);
+  color: var(--mat-sys-on-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+}
 
 main { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; outline: none; }
 #main { outline: none; }
+
+/* Soft entrance for every page. */
+main > :not(router-outlet), #main > :not(router-outlet) { animation: page-in 0.28s ease both; }
+@keyframes page-in { from { opacity: 0; transform: translateY(8px); } }
 
 .sync-error {
   margin: 0;
@@ -62,7 +141,25 @@ main { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; outline: none
   font-size: 14px;
 }
 
-@media (max-width: 600px) {
-  .logo { display: none; }
-  .user { font-size: 12px; }
+.bottom-nav { display: none; }
+
+@media (max-width: 700px) {
+  .logo span, .links, .avatar-btn .name, .avatar-btn .caret { display: none; }
+  .logo { margin-right: 0; }
+  .avatar-btn { padding: 0 6px; }
+  main { padding-bottom: 96px; }
+
+  .bottom-nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    background: var(--at-surface-glass);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--at-border);
+
+    a { flex-direction: column; gap: 2px; padding: 6px 24px; font-size: 12px; border-radius: 16px; }
+  }
 }

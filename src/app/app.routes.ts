@@ -14,6 +14,7 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', loadComponent: () => import('./features/catalog/catalog.page').then(m => m.CatalogPage) },
       { path: 'anime/:id', loadComponent: () => import('./features/anime-detail/anime-detail.page').then(m => m.AnimeDetailPage) },
       { path: 'mi-lista', loadComponent: () => import('./features/watch-list/watch-list.page').then(m => m.WatchListPage) },
+      { path: 'perfil', loadComponent: () => import('./features/profile/profile.page').then(m => m.ProfilePage) },
     ],
   },
   { path: '**', redirectTo: '' },

@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,15 +14,18 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { EpisodesService } from '../../application/episodes.service';
 import { WatchListService } from '../../application/watch-list.service';
 import { Anime, Episode, MAX_NOTES_LENGTH, WATCH_STATUSES, WatchStatus, displayTitle } from '../../domain/models';
-import { AnimeCatalog } from '../../domain/ports';
+import { EpisodeOrder, sortEpisodes } from '../../domain/episodes';
+import { AnimeCatalog, KeyValueStore } from '../../domain/ports';
 import { nextEpisodeLabel } from '../../domain/schedule';
 import { nextUnwatched } from '../../domain/watch-list';
 import { Breadcrumbs, Crumb } from '../../shared/breadcrumbs/breadcrumbs';
 import { parentCrumb } from '../../shared/navigation';
 
+export const EPISODE_ORDER_KEY = 'at.episodeOrder';
+
 @Component({
   selector: 'app-anime-detail-page',
-  imports: [RouterLink, Breadcrumbs, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule,
+  imports: [RouterLink, Breadcrumbs, MatButtonModule, MatButtonToggleModule, MatCheckboxModule, MatFormFieldModule, MatIconModule,
     MatInputModule, MatListModule, MatProgressBarModule, MatSelectModule, MatSlideToggleModule],
   templateUrl: './anime-detail.page.html',
   styleUrl: './anime-detail.page.scss',
@@ -36,6 +40,7 @@ export class AnimeDetailPage {
   private readonly episodesService = inject(EpisodesService);
   private readonly document = inject(DOCUMENT);
   private readonly route = inject(ActivatedRoute);
+  private readonly store = inject(KeyValueStore);
   protected readonly watchList = inject(WatchListService);
 
   protected readonly statuses = WATCH_STATUSES;
@@ -65,6 +70,15 @@ export class AnimeDetailPage {
     nextUnwatched({ watched: this.tracked()?.watched ?? [], knownEpisodes: this.total() }),
   );
   protected readonly next = computed(() => nextEpisodeLabel(this.anime()?.nextEpisode ?? null));
+
+  /** Ascending or descending; remembered because long series have hundreds of episodes. */
+  protected readonly order = signal<EpisodeOrder>(this.store.get<EpisodeOrder>(EPISODE_ORDER_KEY, 'asc') === 'desc' ? 'desc' : 'asc');
+  protected readonly orderedEpisodes = computed(() => sortEpisodes(this.episodes(), this.order()));
+
+  protected setOrder(order: EpisodeOrder) {
+    this.order.set(order);
+    this.store.set(EPISODE_ORDER_KEY, order);
+  }
 
   constructor() {
     effect(() => {

@@ -59,9 +59,17 @@
     </div>
     <mat-progress-bar mode="determinate" [value]="progress()" aria-label="Capítulos vistos" />
 
+    <div class="order">
+      <span id="order-label">Ordenar capítulos</span>
+      <mat-button-toggle-group [value]="order()" (change)="setOrder($event.value)" aria-labelledby="order-label">
+        <mat-button-toggle value="asc"><mat-icon>arrow_upward</mat-icon> Ascendente</mat-button-toggle>
+        <mat-button-toggle value="desc"><mat-icon>arrow_downward</mat-icon> Descendente</mat-button-toggle>
+      </mat-button-toggle-group>
+    </div>
+
     @if (loadingEpisodes()) { <mat-progress-bar mode="indeterminate" aria-label="Cargando capítulos" /> }
     <mat-list class="list">
-      @for (e of episodes(); track e.number) {
+      @for (e of orderedEpisodes(); track e.number) {
         <mat-list-item [id]="'ep-' + e.number" [class.done]="isWatched(e.number)">
           <mat-checkbox [checked]="isWatched(e.number)" (change)="watchList.toggleEpisode(a, e.number, total())">
             {{ e.title }}

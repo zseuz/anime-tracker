@@ -26,6 +26,7 @@ const COLUMNS = [
   ['watch_list', 'status', "ENUM('plan','watching','completed','dropped') NOT NULL DEFAULT 'watching'"],
   ['watch_list', 'rating', 'TINYINT UNSIGNED NULL'],
   ['watch_list', 'notes', "VARCHAR(2000) NOT NULL DEFAULT ''"],
+  ['users', 'avatar', "VARCHAR(20) NOT NULL DEFAULT 'violet'"],
 ];
 
 /** Creates tables and adds missing columns. Safe to run repeatedly. */

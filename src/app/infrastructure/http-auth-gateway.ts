@@ -1,39 +1,54 @@
 import { Injectable, inject } from '@angular/core';
-import { Session } from '../domain/models';
+import { ProfileChanges, Session } from '../domain/models';
 import { AuthGateway } from '../domain/ports';
 import { AuthError } from '../domain/session';
 import { API_URL, apiFetch, errorMessage } from './api-config';
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 @Injectable()
 export class HttpAuthGateway extends AuthGateway {
   private readonly api = inject(API_URL);
 
   register(username: string, password: string) {
-    return this.post('/auth/register', username, password);
+    return this.session('/auth/register', 'POST', { username, password });
   }
 
   login(username: string, password: string) {
-    return this.post('/auth/login', username, password);
+    return this.session('/auth/login', 'POST', { username, password });
   }
 
   async logout(): Promise<void> {
     await apiFetch(`${this.api}/auth/logout`, { method: 'POST', credentials: 'include' });
   }
 
-  async me(): Promise<Session> {
-    const res = await apiFetch(`${this.api}/me`, { credentials: 'include' });
-    if (!res.ok) throw new AuthError(await errorMessage(res, 'Sesión inválida'), res.status);
-    return (await res.json()) as Session;
+  me() {
+    return this.session('/me', 'GET');
   }
 
-  private async post(path: string, username: string, password: string): Promise<Session> {
+  updateProfile(changes: ProfileChanges) {
+    return this.session('/me', 'PATCH', changes);
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.send('/me/password', 'PUT', { currentPassword, newPassword });
+  }
+
+  async deleteAccount(password: string): Promise<void> {
+    await this.send('/me', 'DELETE', { password });
+  }
+
+  private async session(path: string, method: string, body?: unknown): Promise<Session> {
+    return (await (await this.send(path, method, body)).json()) as Session;
+  }
+
+  private async send(path: string, method: string, body?: unknown): Promise<Response> {
     const res = await apiFetch(`${this.api}${path}`, {
-      method: 'POST',
+      method,
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      ...(body === undefined ? {} : { headers: JSON_HEADERS, body: JSON.stringify(body) }),
     });
     if (!res.ok) throw new AuthError(await errorMessage(res, 'Error de autenticación'), res.status);
-    return (await res.json()) as Session;
+    return res;
   }
 }

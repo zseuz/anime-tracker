@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTabsModule } from '@angular/material/tabs';
 import { AuthService } from '../../application/auth.service';
@@ -10,7 +11,7 @@ import { MIN_PASSWORD_LENGTH, isStrongPassword } from '../../domain/password';
 
 @Component({
   selector: 'app-login-page',
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatTabsModule],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatTabsModule],
   templateUrl: './login.page.html',
   styleUrl: './login.page.scss',
 })
@@ -21,6 +22,7 @@ export class LoginPage {
   protected readonly registering = signal(false);
   protected readonly error = signal('');
   protected readonly submitting = signal(false);
+  protected readonly showPassword = signal(false);
   protected readonly minLength = MIN_PASSWORD_LENGTH;
   protected username = '';
   protected password = '';
