@@ -1,0 +1,76 @@
+<header class="hero">
+  <h1>Explorar</h1>
+  <p>Descubre animes, filtra por género y guarda tu progreso.</p>
+</header>
+
+<section class="filters" aria-label="Filtros">
+  <mat-form-field appearance="outline" class="grow" subscriptSizing="dynamic">
+    <mat-label>Buscar</mat-label>
+    <input matInput name="q" type="search" [(ngModel)]="filters.q" (input)="onSearchInput()" (keyup.enter)="apply()" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Tipo</mat-label>
+    <mat-select [(ngModel)]="filters.type" (selectionChange)="apply()">
+      <mat-option value="">Todos</mat-option>
+      @for (t of types; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Género</mat-label>
+    <mat-select [(ngModel)]="filters.genre" (selectionChange)="apply()">
+      <mat-option [value]="null">Todos</mat-option>
+      @for (g of genres(); track g) { <mat-option [value]="g">{{ g }}</mat-option> }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Estado</mat-label>
+    <mat-select [(ngModel)]="filters.status" (selectionChange)="apply()">
+      <mat-option value="">Todos</mat-option>
+      <mat-option value="airing">En emisión</mat-option>
+      <mat-option value="complete">Finalizado</mat-option>
+      <mat-option value="upcoming">Próximamente</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Ordenar por</mat-label>
+    <mat-select [(ngModel)]="filters.orderBy" (selectionChange)="apply()">
+      <mat-option value="score">Mejor puntuados</mat-option>
+      <mat-option value="popularity">Más populares</mat-option>
+      <mat-option value="trending">En tendencia</mat-option>
+      <mat-option value="newest">Más recientes</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Nota mínima</mat-label>
+    <mat-select [(ngModel)]="filters.minScore" (selectionChange)="apply()">
+      <mat-option [value]="null">Cualquiera</mat-option>
+      @for (s of minScores; track s) { <mat-option [value]="s">{{ s }}+</mat-option> }
+    </mat-select>
+  </mat-form-field>
+  <button mat-flat-button (click)="apply()"><mat-icon>search</mat-icon> Buscar</button>
+</section>
+
+@if (error()) {
+  <p class="error" role="alert">{{ error() }} <button mat-button (click)="retry()">Reintentar</button></p>
+}
+
+<div class="grid" aria-live="polite" [attr.aria-busy]="loading()">
+  @for (anime of results(); track anime.id) {
+    <app-anime-card [anime]="anime" [tracked]="watchList.get(anime.id)" />
+  }
+  @if (loading()) {
+    @for (s of skeletons; track $index) { <div class="skeleton" aria-hidden="true"></div> }
+  }
+</div>
+
+@if (!loading() && !results().length && !error()) { <p class="empty">Sin resultados.</p> }
+
+<div #sentinel class="sentinel">
+  @if (hasNext() && !loading()) {
+    <button mat-stroked-button (click)="loadMore()">Cargar más</button>
+  }
+  @if (!hasNext() && results().length && !loading()) {
+    <p class="end">Has llegado al final.</p>
+  }
+</div>

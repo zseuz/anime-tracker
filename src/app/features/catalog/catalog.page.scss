@@ -1,0 +1,46 @@
+.hero { margin-bottom: 20px; }
+.hero h1 { margin: 0; font-size: 28px; }
+.hero p { margin: 4px 0 0; opacity: 0.7; }
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: var(--at-radius);
+  background: var(--at-surface-glass);
+  border: 1px solid var(--at-border);
+}
+.filters mat-form-field { width: 160px; }
+.filters .grow { flex: 1 1 260px; }
+.filters button { height: 56px; border-radius: var(--at-radius-sm); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 20px;
+  margin: 24px 0;
+}
+
+.skeleton {
+  aspect-ratio: 2 / 3.55;
+  border-radius: var(--at-radius);
+  background: linear-gradient(100deg,
+    var(--mat-sys-surface-container) 30%,
+    var(--mat-sys-surface-container-high) 50%,
+    var(--mat-sys-surface-container) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+.error { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+
+.sentinel { display: flex; justify-content: center; min-height: 48px; padding: 8px 0 24px; }
+.end { opacity: 0.6; margin: 0; }
+
+@media (max-width: 600px) {
+  .filters mat-form-field { flex: 1 1 140px; width: auto; }
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}

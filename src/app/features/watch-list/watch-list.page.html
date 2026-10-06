@@ -1,0 +1,56 @@
+<app-breadcrumbs [items]="crumbs" />
+<div class="bar">
+  <div>
+    <h1>Mi lista</h1>
+    <p class="sub">Tu progreso y avisos de capítulos nuevos.</p>
+  </div>
+  <button mat-flat-button (click)="watchList.checkForNewEpisodes()" [disabled]="watchList.checking()">
+    <mat-icon>refresh</mat-icon> Buscar capítulos nuevos
+  </button>
+</div>
+
+<mat-button-toggle-group class="tabs" [value]="filter()" (change)="filter.set($event.value)" aria-label="Filtrar por estado">
+  @for (tab of tabs; track tab.value) {
+    <mat-button-toggle [value]="tab.value">{{ tab.label }} <span class="n">{{ count(tab.value) }}</span></mat-button-toggle>
+  }
+</mat-button-toggle-group>
+
+@if (watchList.checking()) { <mat-progress-bar mode="indeterminate" aria-label="Buscando capítulos nuevos" /> }
+@if (!watchList.items().length) {
+  <p class="empty">Aún no tienes animes. Marca un capítulo o elige un estado en cualquier anime.</p>
+} @else if (!visible().length) {
+  <p class="empty">No hay animes con este estado.</p>
+}
+
+<div class="grid">
+  @for (t of visible(); track t.id) {
+    <article class="item" [class.has-new]="t.newEpisodes">
+      <img [src]="t.image" [alt]="t.title" [routerLink]="['/anime', t.id]" [queryParams]="fromWatchList" />
+      <div class="info">
+        <a [routerLink]="['/anime', t.id]" [queryParams]="fromWatchList" class="name">{{ t.title }}</a>
+        <div class="progress-text">
+          {{ t.watched.length }} vistos @if (t.knownEpisodes) { / {{ t.knownEpisodes }} }
+          @if (t.rating) { <span class="rating">· ★ {{ t.rating }}</span> }
+        </div>
+        @if (t.knownEpisodes) {
+          <mat-progress-bar mode="determinate" [value]="(t.watched.length / t.knownEpisodes) * 100" [attr.aria-label]="'Progreso de ' + t.title" />
+        }
+        @if (next(t); as n) {
+          <a class="resume" [routerLink]="['/anime', t.id]" [queryParams]="fromWatchList" [fragment]="'ep-' + n">
+            <mat-icon inline>play_arrow</mat-icon> Siguiente: Capítulo {{ n }}
+          </a>
+        }
+        @if (t.following) {
+          <div class="follow">
+            <mat-icon inline>notifications_active</mat-icon> Siguiendo
+            @if (t.newEpisodes) { <strong class="new">{{ t.newEpisodes }} nuevo(s)</strong> }
+          </div>
+        }
+        <div class="actions">
+          @if (t.newEpisodes) { <button mat-button (click)="watchList.acknowledge(t.id)">Visto</button> }
+          <button mat-button (click)="watchList.remove(t.id)"><mat-icon>delete</mat-icon> Quitar</button>
+        </div>
+      </div>
+    </article>
+  }
+</div>

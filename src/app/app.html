@@ -1,0 +1,30 @@
+<a class="skip" href="#main" (click)="skipToContent($event)">Saltar al contenido</a>
+
+@if (auth.loggedIn()) {
+  <mat-toolbar>
+    <span class="logo">AnimeTracker</span>
+    <a mat-button routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Explorar</a>
+    <a mat-button routerLink="/mi-lista" routerLinkActive="active"
+       [matBadge]="watchList.totalNew()" [matBadgeHidden]="!watchList.totalNew()" matBadgeColor="warn">Mi lista</a>
+    <span class="spacer"></span>
+    @if (notifications.supported()) {
+      <button mat-icon-button (click)="notifications.toggle()" [attr.aria-pressed]="notifications.enabled()"
+              [matTooltip]="bellLabel" [attr.aria-label]="bellLabel" [disabled]="notifications.blocked()">
+        <mat-icon>{{ notifications.enabled() ? 'notifications_active' : 'notifications_off' }}</mat-icon>
+      </button>
+    }
+    <button mat-icon-button (click)="theme.toggle()"
+            [matTooltip]="theme.mode() === 'dark' ? 'Tema claro' : 'Tema oscuro'"
+            [attr.aria-label]="theme.mode() === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'">
+      <mat-icon>{{ theme.mode() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    </button>
+    <span class="user"><mat-icon inline>person</mat-icon> {{ auth.user() }}</span>
+    <button mat-icon-button (click)="logout()" aria-label="Cerrar sesión" matTooltip="Cerrar sesión"><mat-icon>logout</mat-icon></button>
+  </mat-toolbar>
+  @if (watchList.syncError()) {
+    <p class="sync-error" role="alert">No se pudo sincronizar tu lista con el servidor. Revisa que la API esté en marcha.</p>
+  }
+  <main id="main" tabindex="-1"><router-outlet /></main>
+} @else {
+  <div id="main" tabindex="-1"><router-outlet /></div>
+}

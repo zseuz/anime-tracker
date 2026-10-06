@@ -1,0 +1,55 @@
+# One command to run everything:  docker compose up --build
+# Copy .env.docker.example to .env first and set real secrets.
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Runs once: creates the database, the restricted app user and the tables.
+  db-setup:
+    build: ./server
+    command: ["node", "scripts/setup-db.js"]
+    environment:
+      DB_HOST: db
+      ADMIN_USER: root
+      ADMIN_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      APP_PASSWORD: ${DB_APP_PASSWORD:?set DB_APP_PASSWORD in .env}
+      DB_NAMES: anime_tracker
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: ./server
+    environment:
+      DB_HOST: db
+      DB_USER: anime_app
+      DB_PASSWORD: ${DB_APP_PASSWORD}
+      DB_NAME: anime_tracker
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (32+ characters)}
+      CORS_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      NODE_ENV: ${API_ENV:-development} # use "production" behind HTTPS so cookies are Secure
+    ports:
+      - "3000:3000"
+    depends_on:
+      db-setup:
+        condition: service_completed_successfully
+
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  db-data:

@@ -1,0 +1,80 @@
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$violet-palette,
+        tertiary: mat.$rose-palette,
+      ),
+      typography: (
+        plain-family: 'Inter, Roboto, sans-serif',
+        brand-family: 'Inter, Roboto, sans-serif',
+      ),
+      density: 0,
+    )
+  );
+}
+
+:root {
+  --at-radius: 16px;
+  --at-radius-sm: 10px;
+  --at-surface-glass: color-mix(in srgb, var(--mat-sys-surface-container) 78%, transparent);
+  --at-border: color-mix(in srgb, var(--mat-sys-outline-variant) 70%, transparent);
+  --at-accent-gradient: linear-gradient(135deg, var(--mat-sys-primary), var(--mat-sys-tertiary));
+  --at-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+:root[data-theme='light'] { --at-shadow: 0 8px 24px rgb(40 30 70 / 0.18); }
+
+// Material components manage their own box model; only layout wrappers opt in.
+.at-box, main, section, article, header { box-sizing: border-box; }
+
+// Theme: follows the system unless the user picked one (ThemeService sets data-theme).
+:root { color-scheme: light dark; }
+:root[data-theme='dark'] { color-scheme: dark; }
+:root[data-theme='light'] { color-scheme: light; }
+
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  background-color: var(--mat-sys-surface);
+  background-image:
+    radial-gradient(900px 500px at 8% -10%, color-mix(in srgb, var(--mat-sys-primary) 16%, transparent), transparent 70%),
+    radial-gradient(800px 500px at 100% 0%, color-mix(in srgb, var(--mat-sys-tertiary) 12%, transparent), transparent 70%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.01em; }
+
+a { color: var(--mat-sys-primary); }
+
+::selection { background: color-mix(in srgb, var(--mat-sys-primary) 40%, transparent); }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mat-sys-outline-variant) transparent;
+}
+
+:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
+
+/* Shared helpers */
+.error {
+  color: var(--mat-sys-on-error-container);
+  background: var(--mat-sys-error-container);
+  padding: 10px 14px;
+  border-radius: var(--at-radius-sm);
+}
+
+.empty {
+  text-align: center;
+  opacity: 0.7;
+  padding: 48px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

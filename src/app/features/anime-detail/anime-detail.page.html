@@ -1,0 +1,75 @@
+<app-breadcrumbs [items]="crumbs()" />
+<a mat-button [routerLink]="parent().link" class="back"><mat-icon>arrow_back</mat-icon> Volver a {{ parent().label }}</a>
+@if (loading()) { <mat-progress-bar mode="indeterminate" aria-label="Cargando anime" /> }
+@if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+
+@if (anime(); as a) {
+  <section class="hero" [style.--cover]="'url(' + a.image + ')'">
+    <img class="poster" [src]="a.image" [alt]="title(a)" />
+    <div class="info">
+      <h1>{{ title(a) }}</h1>
+      <div class="chips">
+        <span class="chip score">★ {{ a.score ?? '–' }}</span>
+        @if (a.type) { <span class="chip">{{ a.type }}</span> }
+        <span class="chip">{{ a.status }}</span>
+        @if (a.year) { <span class="chip">{{ a.year }}</span> }
+        @if (next(); as label) { <span class="chip next"><mat-icon inline>schedule</mat-icon> {{ label }}</span> }
+        @for (g of a.genres; track g) { <span class="chip soft">{{ g }}</span> }
+      </div>
+      <p class="synopsis">{{ a.synopsis }}</p>
+
+      <div class="controls">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Estado</mat-label>
+          <mat-select [value]="tracked()?.status ?? null" (selectionChange)="setStatus(a, $event.value)"
+                      placeholder="Añadir a mi lista">
+            @for (s of statuses; track s.value) { <mat-option [value]="s.value">{{ s.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Mi nota</mat-label>
+          <mat-select [value]="tracked()?.rating ?? null" (selectionChange)="setRating(a, $event.value)">
+            <mat-option [value]="null">Sin nota</mat-option>
+            @for (r of ratings; track r) { <mat-option [value]="r">{{ r }} / 10</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-slide-toggle [checked]="!!tracked()?.following" (change)="watchList.toggleFollow(a, total())">
+          Avisarme de nuevos capítulos
+        </mat-slide-toggle>
+      </div>
+
+      <mat-form-field appearance="outline" class="notes" subscriptSizing="dynamic">
+        <mat-label>Mis notas</mat-label>
+        <textarea matInput rows="3" [attr.maxlength]="maxNotes" [value]="tracked()?.notes ?? ''"
+                  (blur)="saveNotes(a, $any($event.target).value)"></textarea>
+      </mat-form-field>
+    </div>
+  </section>
+
+  <section class="episodes">
+    <div class="episodes-head">
+      <h2>Capítulos</h2>
+      <span class="count">{{ watchedCount() }} / {{ total() || '?' }} vistos</span>
+      <span class="spacer"></span>
+      @if (resume(); as n) {
+        <button mat-flat-button (click)="goToEpisode(n)"><mat-icon>play_arrow</mat-icon> Continuar: Capítulo {{ n }}</button>
+      }
+      <button mat-stroked-button (click)="watchList.setAllWatched(a, total(), true)">Marcar todos</button>
+      <button mat-stroked-button (click)="watchList.setAllWatched(a, total(), false)">Desmarcar todos</button>
+    </div>
+    <mat-progress-bar mode="determinate" [value]="progress()" aria-label="Capítulos vistos" />
+
+    @if (loadingEpisodes()) { <mat-progress-bar mode="indeterminate" aria-label="Cargando capítulos" /> }
+    <mat-list class="list">
+      @for (e of episodes(); track e.number) {
+        <mat-list-item [id]="'ep-' + e.number" [class.done]="isWatched(e.number)">
+          <mat-checkbox [checked]="isWatched(e.number)" (change)="watchList.toggleEpisode(a, e.number, total())">
+            {{ e.title }}
+            @if (e.aired) { <small class="aired">· {{ e.aired.slice(0, 10) }}</small> }
+          </mat-checkbox>
+        </mat-list-item>
+      }
+    </mat-list>
+    @if (!loadingEpisodes() && !episodes().length) { <p class="empty">Aún no hay capítulos emitidos.</p> }
+  </section>
+}

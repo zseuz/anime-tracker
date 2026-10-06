@@ -1,0 +1,17 @@
+<a class="card" [routerLink]="['/anime', anime().id]">
+  <div class="poster">
+    <img [src]="anime().image" [alt]="title(anime())" loading="lazy" />
+    <span class="score"><mat-icon inline>star</mat-icon>{{ anime().score ?? '–' }}</span>
+    @if (tracked()?.newEpisodes) { <span class="new">¡Nuevo!</span> }
+  </div>
+  <div class="body">
+    <div class="title">{{ title(anime()) }}</div>
+    <div class="meta">{{ anime().type }} · {{ anime().episodes ?? '?' }} ep</div>
+    @if (next(); as label) {
+      <div class="next"><mat-icon inline>schedule</mat-icon>{{ label }}</div>
+    }
+    @if (tracked(); as t) {
+      <div class="in-list"><mat-icon inline>bookmark</mat-icon>{{ statusLabel() }} · {{ t.watched.length }} vistos</div>
+    }
+  </div>
+</a>

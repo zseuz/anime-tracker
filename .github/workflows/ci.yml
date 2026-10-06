@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (tests + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx ng test --no-watch
+      - run: npx ng build
+
+  api:
+    name: API (tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  e2e:
+    name: End-to-end (Playwright + MySQL)
+    runs-on: ubuntu-latest
+    needs: [frontend, api]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root-ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot-ci"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USER: anime_app
+      DB_PASSWORD: ci-app-password
+      DB_NAME: anime_tracker_test
+      JWT_SECRET: ci-only-secret-ci-only-secret-ci-only-secret-0123456789
+      CORS_ORIGIN: http://localhost:4200
+      E2E_CHANNEL: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm --prefix server ci
+      - name: Create the test database and the restricted app user
+        run: npm --prefix server run db:setup
+        env:
+          ADMIN_USER: root
+          ADMIN_PASSWORD: root-ci
+          APP_PASSWORD: ci-app-password
+          DB_NAMES: anime_tracker_test
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

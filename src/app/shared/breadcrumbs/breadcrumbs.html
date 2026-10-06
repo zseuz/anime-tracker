@@ -1,0 +1,14 @@
+<nav aria-label="Migas de pan">
+  <ol>
+    @for (item of items(); track $index; let last = $last) {
+      <li>
+        @if (!last && item.link) {
+          <a [routerLink]="commands(item.link)">{{ item.label }}</a>
+          <mat-icon class="sep" aria-hidden="true">chevron_right</mat-icon>
+        } @else {
+          <span aria-current="page">{{ item.label }}</span>
+        }
+      </li>
+    }
+  </ol>
+</nav>

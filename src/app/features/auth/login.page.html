@@ -1,0 +1,30 @@
+<div class="wrap">
+  <div class="panel">
+    <header class="brand">
+      <h1>AnimeTracker</h1>
+      <p>Inicia sesión para guardar tu progreso</p>
+    </header>
+    <mat-tab-group (selectedIndexChange)="setMode($event)" mat-stretch-tabs="true">
+      <mat-tab label="Entrar" />
+      <mat-tab label="Crear cuenta" />
+    </mat-tab-group>
+    <form (ngSubmit)="submit()" class="form">
+      <mat-form-field appearance="outline">
+        <mat-label>Usuario</mat-label>
+        <input matInput name="username" [(ngModel)]="username" required autocomplete="username" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Contraseña</mat-label>
+        <input matInput type="password" name="password" [(ngModel)]="password" required
+               [autocomplete]="registering() ? 'new-password' : 'current-password'" />
+        @if (registering()) {
+          <mat-hint>Mínimo {{ minLength }} caracteres, con letras y números</mat-hint>
+        }
+      </mat-form-field>
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      <button mat-flat-button type="submit" [disabled]="!canSubmit">
+        {{ registering() ? 'Crear cuenta' : 'Entrar' }}
+      </button>
+    </form>
+  </div>
+</div>
