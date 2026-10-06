@@ -6,6 +6,7 @@ Frontend en Angular + Angular Material (PWA instalable), backend en Node/Express
 ## Funciones
 
 - **Cuentas y sesión** con cookie `HttpOnly` (el token no es accesible desde JavaScript), límite de intentos de login y contraseñas con letras y números (8+).
+- **Perfil editable** (`/perfil`): nombre de usuario, color del avatar, cambio de contraseña (pide la actual) y eliminación de la cuenta con todos sus datos (pide la contraseña).
 - **Catálogo** con filtros por tipo, género, estado, nota mínima y orden. Los filtros viven en la URL (se pueden compartir y sobreviven a recargar), búsqueda con pausa y desplazamiento infinito.
 - **Seguimiento**: capítulos vistos, estado (Viendo / Pendiente / Completado / Abandonado), nota 1–10, notas personales y botón "Continuar: Capítulo N".
 - **Avisos de capítulos nuevos**: se revisan al iniciar sesión, cada 15 minutos y al volver a la pestaña; opcionalmente con notificaciones del navegador. En cada tarjeta se ve cuándo sale el próximo capítulo.
@@ -69,3 +70,4 @@ CI en GitHub Actions: `.github/workflows/ci.yml` (frontend, API y e2e con MySQL)
 - Usa un `JWT_SECRET` largo y aleatorio y un usuario de MySQL restringido (lo crea `db:setup`).
 - La URL de la API se cambia con el token `API_URL` (`src/app/infrastructure/api-config.ts`).
 - El service worker solo se activa en la compilación de producción (`npx ng build`).
+"# anime-tracker" 
